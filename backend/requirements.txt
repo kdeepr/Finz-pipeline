@@ -10,7 +10,6 @@ python-dotenv>=1.0
 pandas>=2.2
 openpyxl>=3.1
 google-generativeai>=0.8
-intuit-oauth>=1.2.6
 requests>=2.32
 pytest>=8.3
 pytest-asyncio>=0.24

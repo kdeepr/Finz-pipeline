@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     allowed_currencies: list[str] = ["USD"]
     max_upload_rows: int = 50_000
 
+    # --- Sync eligibility ---
+    # "Safely classified" per PDF 4.5: a rule/vendor-directory match (always
+    # confidence 1.0) syncs automatically; a low-confidence Gemini guess sits
+    # below this bar and must go through human review first.
+    auto_sync_confidence_threshold: float = 0.95
+
 
 @lru_cache
 def get_settings() -> Settings:
