@@ -1,0 +1,50 @@
+[
+  {"match_substring": "THE HOME DEPOT", "canonical_name": "The Home Depot", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "HOMEDEPOT.COM", "canonical_name": "The Home Depot", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "LOWES.COM", "canonical_name": "Lowe's", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "LOWE'S HOME IMPROVEMENT", "canonical_name": "Lowe's", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "FERGUSON.COM", "canonical_name": "Ferguson", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "FERGUSON ENT", "canonical_name": "Ferguson", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "SUPPLYHOUSE.COM", "canonical_name": "SupplyHouse.com", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "WW GRAINGER", "canonical_name": "W.W. Grainger", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "ABC PLUMBING SUPPLY", "canonical_name": "ABC Plumbing Supply", "transaction_type": "cogs", "qbo_account_code": "5000"},
+  {"match_substring": "CES #", "canonical_name": "CES Electrical Supply", "transaction_type": "cogs", "qbo_account_code": "5000"},
+
+  {"match_substring": "APEX ELECTRICAL", "canonical_name": "Apex Electrical", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "APEX ELEC LLC", "canonical_name": "Apex Electrical", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "RIVERA PLBG CO", "canonical_name": "Rivera Plumbing", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "RIVERA PLUMBING", "canonical_name": "Rivera Plumbing", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "NORTHLINE HVAC", "canonical_name": "Northline HVAC", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "PRECISION INSTALL SVCS", "canonical_name": "Precision Install Services", "transaction_type": "cogs", "qbo_account_code": "5010"},
+  {"match_substring": "METRO HANDYMAN", "canonical_name": "Metro Handyman", "transaction_type": "cogs", "qbo_account_code": "5010"},
+
+  {"match_substring": "ADP PAYROLL", "canonical_name": "ADP", "transaction_type": "operating_expense", "qbo_account_code": "6000"},
+  {"match_substring": "PARKSIDE COMMERCIAL MGMT", "canonical_name": "Parkside Commercial Management", "transaction_type": "operating_expense", "qbo_account_code": "6010"},
+
+  {"match_substring": "SHELL OIL", "canonical_name": "Shell", "transaction_type": "operating_expense", "qbo_account_code": "6020"},
+  {"match_substring": "BP#", "canonical_name": "BP", "transaction_type": "operating_expense", "qbo_account_code": "6020"},
+  {"match_substring": "EXXONMOBIL", "canonical_name": "ExxonMobil", "transaction_type": "operating_expense", "qbo_account_code": "6020"},
+  {"match_substring": "SPEEDWAY", "canonical_name": "Speedway", "transaction_type": "operating_expense", "qbo_account_code": "6020"},
+
+  {"match_substring": "INTUIT *QUICKBOOKS ONLINE", "canonical_name": "Intuit QuickBooks Online", "transaction_type": "operating_expense", "qbo_account_code": "6030"},
+  {"match_substring": "GOOGLE WORKSPACE", "canonical_name": "Google Workspace", "transaction_type": "operating_expense", "qbo_account_code": "6030"},
+  {"match_substring": "SERVICETITAN SUBSCRIPTION", "canonical_name": "ServiceTitan", "transaction_type": "operating_expense", "qbo_account_code": "6030"},
+
+  {"match_substring": "GOOGLE ADS", "canonical_name": "Google Ads", "transaction_type": "operating_expense", "qbo_account_code": "6040"},
+  {"match_substring": "YELP ADVERTISING", "canonical_name": "Yelp Advertising", "transaction_type": "operating_expense", "qbo_account_code": "6040"},
+
+  {"match_substring": "HISCOX BUSINESS INSURANCE", "canonical_name": "Hiscox", "transaction_type": "operating_expense", "qbo_account_code": "6050"},
+
+  {"match_substring": "CON EDISON", "canonical_name": "Con Edison", "transaction_type": "operating_expense", "qbo_account_code": "6060"},
+  {"match_substring": "VERIZON BUSINESS", "canonical_name": "Verizon Business", "transaction_type": "operating_expense", "qbo_account_code": "6060"},
+
+  {"match_substring": "CLEARLEDGER CPA", "canonical_name": "ClearLedger CPA", "transaction_type": "operating_expense", "qbo_account_code": "6070"},
+
+  {"match_substring": "MONTHLY SERVICE FEE", "canonical_name": "Bank", "transaction_type": "operating_expense", "qbo_account_code": "6080"},
+
+  {"match_substring": "STAPLES", "canonical_name": "Staples", "transaction_type": "operating_expense", "qbo_account_code": "6090"},
+
+  {"match_substring": "FLEET AUTO CARE", "canonical_name": "Fleet Auto Care", "transaction_type": "operating_expense", "qbo_account_code": "6100"},
+
+  {"match_substring": "TOOL PACKAGE", "canonical_name": "Milwaukee Tool", "transaction_type": "fixed_asset", "qbo_account_code": "1500"}
+]

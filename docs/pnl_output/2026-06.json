@@ -1,0 +1,127 @@
+{
+  "period": "2026-06",
+  "period_label": "June 2026",
+  "start_date": "2026-06-01",
+  "end_date": "2026-06-30",
+  "revenue": {
+    "lines": [
+      {
+        "account_code": "4000",
+        "account_name": "Repair Service Revenue",
+        "total": 43525.0,
+        "transaction_count": 18
+      },
+      {
+        "account_code": "4010",
+        "account_name": "Installation Revenue",
+        "total": 50450.0,
+        "transaction_count": 6
+      },
+      {
+        "account_code": "4020",
+        "account_name": "Maintenance Plan Revenue",
+        "total": 3650.0,
+        "transaction_count": 3
+      },
+      {
+        "account_code": "4100",
+        "account_name": "Customer Refunds",
+        "total": -2100.0,
+        "transaction_count": 1
+      }
+    ],
+    "subtotal": 95525.0
+  },
+  "cogs": {
+    "lines": [
+      {
+        "account_code": "5000",
+        "account_name": "Materials & Supplies",
+        "total": -18475.0,
+        "transaction_count": 8
+      },
+      {
+        "account_code": "5010",
+        "account_name": "Subcontractor Costs",
+        "total": -12000.0,
+        "transaction_count": 5
+      }
+    ],
+    "subtotal": -30475.0
+  },
+  "gross_profit": 65050.0,
+  "operating_expenses": {
+    "lines": [
+      {
+        "account_code": "6000",
+        "account_name": "Payroll Expense",
+        "total": -27700.0,
+        "transaction_count": 2
+      },
+      {
+        "account_code": "6010",
+        "account_name": "Rent Expense",
+        "total": -8200.0,
+        "transaction_count": 1
+      },
+      {
+        "account_code": "6020",
+        "account_name": "Vehicle & Fuel",
+        "total": -1305.0,
+        "transaction_count": 4
+      },
+      {
+        "account_code": "6030",
+        "account_name": "Software & Subscriptions",
+        "total": -1445.0,
+        "transaction_count": 3
+      },
+      {
+        "account_code": "6040",
+        "account_name": "Marketing & Advertising",
+        "total": -3100.0,
+        "transaction_count": 2
+      },
+      {
+        "account_code": "6050",
+        "account_name": "Insurance Expense",
+        "total": -1225.0,
+        "transaction_count": 1
+      },
+      {
+        "account_code": "6060",
+        "account_name": "Utilities",
+        "total": -1260.0,
+        "transaction_count": 2
+      },
+      {
+        "account_code": "6070",
+        "account_name": "Professional Fees",
+        "total": -1650.0,
+        "transaction_count": 1
+      },
+      {
+        "account_code": "6080",
+        "account_name": "Bank Fees",
+        "total": -35.0,
+        "transaction_count": 1
+      },
+      {
+        "account_code": "6090",
+        "account_name": "Office & General",
+        "total": -310.0,
+        "transaction_count": 1
+      },
+      {
+        "account_code": "6100",
+        "account_name": "Repairs & Maintenance",
+        "total": -915.0,
+        "transaction_count": 1
+      }
+    ],
+    "subtotal": -47145.0
+  },
+  "net_profit": 17905.0,
+  "excluded_unclassified_count": 0,
+  "generated_at": "2026-07-25T18:36:50.888136+00:00"
+}
