@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import mappings, transactions, uploads
+from app.api import classification, mappings, transactions, uploads
+from app.classification.vendor_directory import seed_default_vendors
 from app.db import get_db
 from app.ingestion import mapping_repo
 from app.ingestion.bank_accounts import seed_default_aliases
@@ -13,6 +14,7 @@ from app.ingestion.bank_accounts import seed_default_aliases
 async def lifespan(app: FastAPI):
     db = get_db()
     seed_default_aliases(db)
+    seed_default_vendors(db)
     mapping_repo.seed_default_profile(db)
     yield
 
@@ -29,6 +31,7 @@ app.add_middleware(
 app.include_router(mappings.router)
 app.include_router(uploads.router)
 app.include_router(transactions.router)
+app.include_router(classification.router)
 
 
 @app.get("/api/health")

@@ -76,7 +76,8 @@ class NormalizedTransaction(BaseModel):
     # --- Classification (populated starting in 4.3) ---
     transaction_type: TransactionType | None = None
     counterparty: str | None = None
-    qbo_account: str | None = None
+    qbo_account: str | None = None  # chart-of-accounts Account No., e.g. "4000"
+    qbo_account_name: str | None = None
     classification_confidence: float | None = None
     classification_explanation: str | None = None
     classification_status: ClassificationStatus = "unclassified"

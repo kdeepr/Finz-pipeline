@@ -1,10 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from pymongo.database import Database
 
+from app.classification.coa import is_valid_account_code
+from app.classification.service import apply_review
 from app.deps import db_dep
-from app.models.transaction import NormalizedTransaction, RawTransaction
+from app.models.transaction import NormalizedTransaction, RawTransaction, TransactionType
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
+
+
+class ReviewRequest(BaseModel):
+    transaction_type: TransactionType
+    qbo_account: str | None = None
+    counterparty: str | None = None
+    apply_to_similar: bool = True
 
 
 @router.get("", response_model=list[NormalizedTransaction])
@@ -47,3 +57,25 @@ def get_transaction(transaction_id: str, db: Database = Depends(db_dep)):
         "raw": RawTransaction(**raw_doc) if raw_doc else None,
         "duplicate_of": duplicate_of,
     }
+
+
+@router.post("/{transaction_id}/review", response_model=NormalizedTransaction)
+def review_transaction(transaction_id: str, payload: ReviewRequest, db: Database = Depends(db_dep)):
+    doc = db["normalized_transactions"].find_one({"id": transaction_id})
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if doc["status"] != "ok":
+        raise HTTPException(status_code=400, detail=f"Cannot classify a transaction with status '{doc['status']}'")
+    if payload.qbo_account is not None and payload.transaction_type != "transfer" and not is_valid_account_code(payload.qbo_account):
+        raise HTTPException(status_code=400, detail=f"'{payload.qbo_account}' is not a valid chart-of-accounts account number")
+
+    updated = apply_review(
+        db,
+        doc,
+        transaction_type=payload.transaction_type,
+        qbo_account=payload.qbo_account,
+        counterparty=payload.counterparty,
+        apply_to_similar=payload.apply_to_similar,
+    )
+    updated.pop("_id", None)
+    return NormalizedTransaction(**updated)
