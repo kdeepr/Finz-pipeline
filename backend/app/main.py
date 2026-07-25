@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import classification, mappings, pnl, qbo, transactions, uploads
+from app.api import classification, mappings, pnl, qbo, reconciliation, transactions, uploads
 from app.classification.vendor_directory import seed_default_vendors
 from app.db import get_db
 from app.ingestion import mapping_repo
@@ -34,6 +34,7 @@ app.include_router(transactions.router)
 app.include_router(classification.router)
 app.include_router(pnl.router)
 app.include_router(qbo.router)
+app.include_router(reconciliation.router)
 
 
 @app.get("/api/health")

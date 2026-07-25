@@ -31,6 +31,11 @@ def store_mapping(db: Database, account_no: str, qbo_id: str, qbo_name: str) -> 
     )
 
 
+def get_account_no_by_qbo_id(db: Database, qbo_id: str) -> str | None:
+    doc = db[COLLECTION].find_one({"qbo_id": qbo_id})
+    return doc["account_no"] if doc else None
+
+
 def get_qbo_id(db: Database, account_no: str) -> str:
     doc = db[COLLECTION].find_one({"account_no": account_no})
     if doc is None:
