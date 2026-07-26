@@ -56,7 +56,7 @@ def callback(
 
     `state` is verified with `state_token.verify_state` (a signed, timestamped
     token - see that module), not looked up in a database. There is nothing
-    here that can go stale except the token's own 10-minute expiry.
+    here that can go stale except the token's own expiry (state_token.MAX_AGE_SECONDS).
     """
     settings = get_settings()
 
