@@ -55,7 +55,7 @@ Mongo, including the full challenge dataset end to end.
 ### Connecting to your QuickBooks Online sandbox
 
 See `connect_flow.md`. This is the one interactive step (OAuth consent) that
-only you can complete, using the sandbox company and chart of accounts you
+only a person can complete, using the sandbox company and chart of accounts you
 already set up in 4.1.
 
 ## Architecture
@@ -71,7 +71,7 @@ Classification
   -> approved-correction lookup (pattern signature) -> rule engine -> Gemini (optional) -> unclassified
   -> updates normalized_transactions in place
 
-P&L (computed live, not stored)
+P&L (computed live)
   -> queries normalized_transactions by transaction_type + date range
   -> grouped by each account's QBO "Account Type" (Income/COGS/Expenses)
 
