@@ -53,6 +53,20 @@ def _walk_rows(rows: list[dict], data_rows: list[dict], section_totals: dict[str
             )
         elif row_type == "Section":
             group = row.get("group")
+            # A parent account with sub-accounts (e.g. "Utilities" over "Gas
+            # and Electric"/"Telephone") reports its own direct postings as a
+            # Section's Header, not a Data row - skipping it silently drops
+            # any amount posted straight to the parent account itself, even
+            # though it's exactly as real as a plain Data row's amount.
+            header = row.get("Header", {}).get("ColData", [])
+            if len(header) >= 2:
+                data_rows.append(
+                    {
+                        "account_name": _clean_account_name(header[0].get("value", "")),
+                        "qbo_account_id": header[0].get("id"),
+                        "amount": _to_float(header[-1].get("value")),
+                    }
+                )
             nested = row.get("Rows", {}).get("Row", [])
             if nested:
                 _walk_rows(nested, data_rows, section_totals)

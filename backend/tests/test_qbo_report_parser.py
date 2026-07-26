@@ -76,3 +76,43 @@ def test_captures_section_totals_including_net_income():
 def test_empty_report_does_not_crash():
     result = parse_profit_and_loss({"Rows": {"Row": []}})
     assert result == {"accounts": [], "section_totals": {}}
+
+
+def test_parent_account_with_subaccounts_reports_its_own_header_amount():
+    """
+    Spot-checked against a real sandbox report: a parent account with
+    sub-accounts (e.g. "Utilities" over "Gas and Electric"/"Telephone") comes
+    back as a Section whose OWN direct-posted total sits in "Header", not a
+    Data row - a plain Data-row walk silently drops it entirely.
+    """
+    report = {
+        "Rows": {
+            "Row": [
+                {
+                    "type": "Section",
+                    "group": "Expenses",
+                    "Rows": {
+                        "Row": [
+                            {
+                                "type": "Section",
+                                "Header": {"ColData": [{"value": "Utilities", "id": "24"}, {"value": "3645.00"}]},
+                                "Rows": {
+                                    "Row": [
+                                        {"type": "Data", "ColData": [{"value": "Gas and Electric", "id": "76"}, {"value": "114.09"}]},
+                                        {"type": "Data", "ColData": [{"value": "Telephone", "id": "77"}, {"value": "130.86"}]},
+                                    ]
+                                },
+                                "Summary": {"ColData": [{"value": "Total Utilities"}, {"value": "3889.95"}]},
+                            },
+                        ]
+                    },
+                    "Summary": {"ColData": [{"value": "Total Expenses"}, {"value": "3889.95"}]},
+                },
+            ]
+        }
+    }
+    result = parse_profit_and_loss(report)
+    by_name = {a["account_name"]: (a["amount"], a["qbo_account_id"]) for a in result["accounts"]}
+    assert by_name["Utilities"] == (3645.00, "24")
+    assert by_name["Gas and Electric"] == (114.09, "76")
+    assert by_name["Telephone"] == (130.86, "77")
