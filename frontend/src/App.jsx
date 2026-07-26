@@ -39,7 +39,7 @@ function App() {
       <h1>Finz Accounting Pipeline</h1>
       <p className="subtitle">BrightFix Home Services LLC - bank transaction ingestion, classification, P&amp;L, and QuickBooks reconciliation</p>
 
-      {notice && <div className={notice.kind === "ok" ? "panel" : "error-box"}>{notice.text}</div>}
+      {notice && <div className={notice.kind === "ok" ? "success-box" : "error-box"}>{notice.text}</div>}
 
       <nav className="tabs">
         {TABS.map((t) => (
