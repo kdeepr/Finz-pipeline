@@ -64,9 +64,14 @@ def _data_row(account_no, name, amount, qbo_id):
 
 
 def _build_report(lines: dict[str, tuple], net_income: float):
+    # `lines` holds the app's own (negative-for-outflow) convention, matching
+    # its real /api/pnl output - but a real QBO P&L report shows COGS/Expenses
+    # as positive figures, so the fixture negates them here to simulate what
+    # QuickBooks actually returns (see reconcile()'s EXPENSE_SECTION_TYPES
+    # normalization, which converts them back for comparison).
     income_rows = [_data_row(c, n, a, f"id-{c}") for c, (n, a) in lines.items() if c.startswith("4")]
-    cogs_rows = [_data_row(c, n, a, f"id-{c}") for c, (n, a) in lines.items() if c.startswith("5")]
-    expense_rows = [_data_row(c, n, a, f"id-{c}") for c, (n, a) in lines.items() if c.startswith("6")]
+    cogs_rows = [_data_row(c, n, -a, f"id-{c}") for c, (n, a) in lines.items() if c.startswith("5")]
+    expense_rows = [_data_row(c, n, -a, f"id-{c}") for c, (n, a) in lines.items() if c.startswith("6")]
     return {
         "Rows": {
             "Row": [
@@ -131,6 +136,31 @@ def test_reconciliation_flags_account_missing_in_qbo(client):
     assert bank_fees_line.status == "app_only"
     assert bank_fees_line.qbo_amount == 0.0
     assert result.overall_status == "discrepancies_found"
+
+
+def test_expense_and_cogs_accounts_match_despite_qbos_positive_sign_convention(client):
+    """
+    A real QBO sandbox report was spot-checked and confirmed COGS/Expenses
+    accounts come back as positive figures - this pins that down directly by
+    building the raw report row with a positive amount (bypassing _build_report's
+    own negation) and confirming it still reconciles against the app's negative
+    figure, rather than false-flagging every expense account as a mismatch.
+    """
+    db = _setup(client)
+    report = _build_report(APRIL_LINES, APRIL_NET_PROFIT)
+    # Rent Expense (6010): app shows -8200.0; assert the raw fixture row is the
+    # positive 8200.00 QBO would actually send, confirming _build_report's
+    # negation produced the right raw shape before reconcile() converts back.
+    rent_row = next(
+        row for row in report["Rows"]["Row"][2]["Rows"]["Row"] if row["ColData"][0]["id"] == "id-6010"
+    )
+    assert rent_row["ColData"][-1]["value"] == "8200.00"
+
+    result = reconcile(db, "2026-04", client=FakeQBOClient(report))
+    rent_line = next(line for line in result.lines if line.account_code == "6010")
+    assert rent_line.app_amount == -8200.0
+    assert rent_line.qbo_amount == -8200.0
+    assert rent_line.status == "match"
 
 
 def test_reconciliation_matches_by_name_when_qbo_id_not_in_mapping(client):

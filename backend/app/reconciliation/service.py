@@ -29,6 +29,15 @@ from app.reconciliation.qbo_report_parser import parse_profit_and_loss
 
 TOLERANCE = 0.01
 
+# QuickBooks' own P&L report shows Cost of Goods Sold and Expenses account
+# balances as positive figures (to be subtracted to reach Net Income); this
+# app stores every outflow as a negative amount (the same bank-debit
+# convention used everywhere else in this codebase, including its own P&L).
+# Without normalizing to one sign convention here, every correctly-synced
+# COGS/Expense account would show as a "mismatch" purely from this
+# report-display difference, not an actual discrepancy.
+EXPENSE_SECTION_TYPES = {"Cost of Goods Sold", "Expenses"}
+
 
 def _resolve_account_code(db: Database, row: dict, chart_by_name: dict[str, str]) -> str | None:
     if row.get("qbo_account_id"):
@@ -48,7 +57,9 @@ def reconcile(db: Database, period: str, settings: Settings | None = None, clien
     raw_report = client.get_profit_and_loss(start.isoformat(), end.isoformat())
     parsed = parse_profit_and_loss(raw_report)
 
-    chart_by_name = {a["Account Name"].strip().lower(): a["Account No."] for a in load_chart_of_accounts()}
+    chart = load_chart_of_accounts()
+    chart_by_name = {a["Account Name"].strip().lower(): a["Account No."] for a in chart}
+    account_types = {a["Account No."]: a["QBO Account Type"] for a in chart}
 
     app_by_code: dict[str, dict] = {}
     for section in (pnl.revenue, pnl.cogs, pnl.operating_expenses):
@@ -58,9 +69,12 @@ def reconcile(db: Database, period: str, settings: Settings | None = None, clien
     qbo_by_code: dict[str, dict] = {}
     for row in parsed["accounts"]:
         code = _resolve_account_code(db, row, chart_by_name)
+        amount = row["amount"]
+        if code and account_types.get(code) in EXPENSE_SECTION_TYPES:
+            amount = -amount
         key = code or f"unmatched:{row['account_name']}"
         existing = qbo_by_code.get(key, {"account_name": row["account_name"], "amount": 0.0})
-        existing["amount"] += row["amount"]
+        existing["amount"] += amount
         qbo_by_code[key] = existing
 
     all_codes = set(app_by_code) | set(qbo_by_code)
