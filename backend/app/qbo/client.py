@@ -73,33 +73,38 @@ class QBOClient:
             "Content-Type": "application/json",
         }
 
+    def _request(self, method: str, url: str, **kwargs):
+        # A network-level failure (timeout, DNS, connection refused) is
+        # otherwise indistinguishable from a crash to every caller - route it
+        # through the same QBOAPIError every caller already handles, instead
+        # of letting a raw requests.exceptions.RequestException escape.
+        try:
+            resp = getattr(self.transport, method)(url, timeout=30, **kwargs)
+        except requests.exceptions.RequestException as exc:
+            raise QBOAPIError(0, f"Could not reach QuickBooks: {exc}") from exc
+        if resp.status_code >= 300:
+            raise QBOAPIError(resp.status_code, resp.text)
+        return resp
+
     def create_entity(self, entity_type: str, body: dict) -> dict:
         access_token, realm_id = self._access_token()
         url = f"{self._base_url()}/v3/company/{realm_id}/{entity_type}"
-        resp = self.transport.post(url, json=body, headers=self._headers(access_token), timeout=30)
-        if resp.status_code >= 300:
-            raise QBOAPIError(resp.status_code, resp.text)
+        resp = self._request("post", url, json=body, headers=self._headers(access_token))
         return resp.json()[entity_type.capitalize()]
 
     def query(self, sql: str) -> dict:
         access_token, realm_id = self._access_token()
         url = f"{self._base_url()}/v3/company/{realm_id}/query"
-        resp = self.transport.get(
-            url, params={"query": sql}, headers=self._headers(access_token), timeout=30
-        )
-        if resp.status_code >= 300:
-            raise QBOAPIError(resp.status_code, resp.text)
+        resp = self._request("get", url, params={"query": sql}, headers=self._headers(access_token))
         return resp.json()
 
     def get_profit_and_loss(self, start_date: str, end_date: str) -> dict:
         access_token, realm_id = self._access_token()
         url = f"{self._base_url()}/v3/company/{realm_id}/reports/ProfitAndLoss"
-        resp = self.transport.get(
+        resp = self._request(
+            "get",
             url,
             params={"start_date": start_date, "end_date": end_date, "accounting_method": "Cash"},
             headers=self._headers(access_token),
-            timeout=30,
         )
-        if resp.status_code >= 300:
-            raise QBOAPIError(resp.status_code, resp.text)
         return resp.json()

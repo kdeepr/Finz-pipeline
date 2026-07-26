@@ -8,6 +8,7 @@ that a token-refresh failure surfaces as the one exception type
 than a second, easily-forgotten exception type.
 """
 import pytest
+import requests
 
 from app.config import Settings
 from app.db import get_db
@@ -145,6 +146,26 @@ def test_get_profit_and_loss_hits_reports_endpoint_with_cash_basis(client):
     method, url, params, _ = transport.calls[0]
     assert url == "https://sandbox-quickbooks.api.intuit.com/v3/company/realm-1/reports/ProfitAndLoss"
     assert params == {"start_date": "2026-04-01", "end_date": "2026-04-30", "accounting_method": "Cash"}
+
+
+def test_network_failure_surfaces_as_qbo_api_error_not_a_raw_crash(client):
+    class BrokenTransport:
+        def post(self, url, **kwargs):
+            raise requests.exceptions.ConnectionError("Failed to establish a new connection")
+
+        def get(self, url, **kwargs):
+            raise requests.exceptions.Timeout("Read timed out")
+
+    db = get_db()
+    connection_store.save_tokens(db, "realm-1", "at", "rt", 3600)
+    qbo_client = QBOClient(db, _settings(), transport=BrokenTransport())
+
+    with pytest.raises(QBOAPIError) as exc_info:
+        qbo_client.create_entity("purchase", {})
+    assert "Could not reach QuickBooks" in str(exc_info.value)
+
+    with pytest.raises(QBOAPIError):
+        qbo_client.query("SELECT * FROM Account")
 
 
 def test_production_environment_uses_production_base_url(client):
