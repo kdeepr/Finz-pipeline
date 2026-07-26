@@ -22,17 +22,18 @@ def test_accounts_sync_without_connection_returns_clear_400(client):
     assert "Not connected" in resp.json()["detail"]
 
 
-def _seed_state(client, state="test-state"):
-    from app.db import get_db
+def _make_state():
+    """A validly-signed state, generated exactly the way /connect would."""
+    from app.config import get_settings
+    from app.qbo import state_token
 
-    get_db()["qbo_oauth_state"].insert_one({"state": state})
-    return state
+    return state_token.generate_state(get_settings())
 
 
-def test_callback_with_unknown_state_redirects_to_frontend_with_error(client):
+def test_callback_with_garbled_state_redirects_to_frontend_with_error(client):
     resp = client.get(
         "/api/qbo/callback",
-        params={"code": "abc", "state": "never-issued", "realmId": "123"},
+        params={"code": "abc", "state": "not-a-real-token", "realmId": "123"},
         follow_redirects=False,
     )
     assert resp.status_code in (302, 307)
@@ -42,11 +43,50 @@ def test_callback_with_unknown_state_redirects_to_frontend_with_error(client):
     assert "expired" in location.lower() or "unrecognized" in location.lower()
 
 
+def test_callback_rejects_tampered_state_signature(client):
+    state = _make_state()
+    nonce, ts, _sig = state.split(".")
+    tampered = f"{nonce}.{ts}.0000000000000000000000000000000000000000000000000000000000000000"
+
+    resp = client.get(
+        "/api/qbo/callback",
+        params={"code": "abc", "state": tampered, "realmId": "123"},
+        follow_redirects=False,
+    )
+    location = resp.headers["location"]
+    assert "qbo_status=error" in location
+
+
+def test_callback_state_survives_an_in_memory_db_reset(client):
+    """
+    This is the exact bug that was reported: a database-backed state lookup
+    failed with "unrecognized or expired" on completely valid, fresh connect
+    attempts whenever the backend process/in-memory store was disturbed
+    between /connect and /callback. A signed state has no such dependency -
+    resetting the database entirely between generating and verifying it must
+    not affect the outcome.
+    """
+    from app.db import reset_client_cache
+
+    state = _make_state()
+    reset_client_cache()  # simulates exactly what a backend restart did before
+
+    resp = client.get(
+        "/api/qbo/callback",
+        params={"state": state, "error": "access_denied", "error_description": "just checking state verification"},
+        follow_redirects=False,
+    )
+    location = resp.headers["location"]
+    # Reaches the error/code branch (state verification passed) rather than
+    # the "unrecognized or expired state" branch.
+    assert "just+checking" in location or "just%20checking" in location
+
+
 def test_callback_success_redirects_to_frontend_connected_and_saves_tokens(client, monkeypatch):
     from app.db import get_db
     from app.qbo import connection_store
 
-    state = _seed_state(client)
+    state = _make_state()
     monkeypatch.setattr(
         "app.api.qbo.oauth.exchange_code_for_tokens",
         lambda settings, code: {"access_token": "at", "refresh_token": "rt", "expires_in": 3600},
@@ -67,14 +107,12 @@ def test_callback_success_redirects_to_frontend_connected_and_saves_tokens(clien
     connection = connection_store.get_connection(db)
     assert connection["realm_id"] == "realm-123"
     assert connection["access_token"] == "at"
-    # state is single-use
-    assert db["qbo_oauth_state"].find_one({"state": state}) is None
 
 
 def test_callback_token_exchange_failure_redirects_with_error_instead_of_crashing(client, monkeypatch):
     from app.qbo.oauth import QBOOAuthError
 
-    state = _seed_state(client)
+    state = _make_state()
 
     def boom(settings, code):
         raise QBOOAuthError("Token exchange failed (401): invalid_client")
@@ -98,7 +136,7 @@ def test_callback_surfaces_intuit_side_error_instead_of_generic_422(client):
     # misconfigured app) - state IS still echoed back. Before this was
     # handled, FastAPI's default validation turned this into an opaque
     # "field required" 422 that hid Intuit's actual reason.
-    state = _seed_state(client)
+    state = _make_state()
     resp = client.get(
         "/api/qbo/callback",
         params={"state": state, "error": "access_denied", "error_description": "The user denied access to your application."},
@@ -111,7 +149,7 @@ def test_callback_surfaces_intuit_side_error_instead_of_generic_422(client):
 
 
 def test_callback_missing_code_without_explicit_error_still_redirects_cleanly(client):
-    state = _seed_state(client)
+    state = _make_state()
     resp = client.get("/api/qbo/callback", params={"state": state}, follow_redirects=False)
     assert resp.status_code in (302, 307)
     location = resp.headers["location"]

@@ -1,4 +1,3 @@
-import secrets
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -8,7 +7,7 @@ from pymongo.database import Database
 from app.classification.coa import load_chart_of_accounts
 from app.config import get_settings
 from app.deps import db_dep
-from app.qbo import connection_store, oauth
+from app.qbo import connection_store, oauth, state_token
 from app.qbo.accounts_sync import sync_account_ids
 from app.qbo.client import QBOClient, QBONotConnectedError
 from app.qbo.oauth import QBOOAuthError
@@ -16,14 +15,11 @@ from app.qbo.sync_service import sync_pending
 
 router = APIRouter(prefix="/api/qbo", tags=["qbo"])
 
-_STATE_COLLECTION = "qbo_oauth_state"
-
 
 @router.get("/connect")
-def connect(response: Response, db: Database = Depends(db_dep)):
-    # A cached response here would hand back a stale authorization_url (and
-    # therefore a stale, already-invalid `state`) on a re-click - this must
-    # always issue a fresh state.
+def connect(response: Response):
+    # A cached response here would hand back a stale authorization_url on a
+    # re-click - always issue a fresh one.
     response.headers["Cache-Control"] = "no-store"
     settings = get_settings()
     if not settings.qbo_client_id or not settings.qbo_client_secret:
@@ -31,8 +27,7 @@ def connect(response: Response, db: Database = Depends(db_dep)):
             status_code=400,
             detail="QBO_CLIENT_ID / QBO_CLIENT_SECRET are not configured. Add them to .env from your Intuit developer app.",
         )
-    state = secrets.token_urlsafe(24)
-    db[_STATE_COLLECTION].insert_one({"state": state})
+    state = state_token.generate_state(settings)
     return {"authorization_url": oauth.build_authorization_url(settings, state)}
 
 
@@ -58,12 +53,17 @@ def callback(
     `error`/`error_description` instead of a code - making them required
     turned every such failure into an opaque generic 422 ("field required")
     that hid Intuit's actual reason instead of showing it.
+
+    `state` is verified with `state_token.verify_state` (a signed, timestamped
+    token - see that module), not looked up in a database. There is nothing
+    here that can go stale except the token's own 10-minute expiry.
     """
     settings = get_settings()
 
-    if not db[_STATE_COLLECTION].find_one({"state": state}):
+    if not state_token.verify_state(settings, state):
         return _redirect_with_error(
-            settings, "Unrecognized or expired OAuth state - the connect link may be stale. Click Connect to QuickBooks again."
+            settings,
+            "Unrecognized or expired OAuth state - the connect link may be more than 10 minutes old. Click Connect to QuickBooks again.",
         )
 
     if error or not code or not realmId:
@@ -76,7 +76,6 @@ def callback(
         return _redirect_with_error(settings, str(exc))
 
     connection_store.save_tokens(db, realmId, tokens["access_token"], tokens["refresh_token"], tokens["expires_in"])
-    db[_STATE_COLLECTION].delete_one({"state": state})
     return RedirectResponse(f"{settings.frontend_url}/?{urlencode({'qbo_status': 'connected', 'realm_id': realmId})}")
 
 
