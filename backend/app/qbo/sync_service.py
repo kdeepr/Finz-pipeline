@@ -71,8 +71,20 @@ def _sync_non_transfer(db: Database, client: QBOClient, txn: dict) -> None:
 
 
 def _sync_transfer_debit_leg(db: Database, client: QBOClient, txn: dict) -> None:
-    from_id = account_ids.get_qbo_id(db, mapper.BANK_ACCOUNT_NO[txn["bank_account"]])
-    to_id = account_ids.get_qbo_id(db, mapper.BANK_ACCOUNT_NO[txn["counterparty"]])
+    # .get(), not [...]: an unrecognized bank_account/counterparty (e.g. after
+    # a manual correction set counterparty to something other than one of the
+    # two known bank accounts) must fail just this one transaction, the same
+    # way every other mapping failure does - not raise an uncaught KeyError
+    # that would abort the whole sync run partway through.
+    from_account_no = mapper.BANK_ACCOUNT_NO.get(txn["bank_account"])
+    to_account_no = mapper.BANK_ACCOUNT_NO.get(txn["counterparty"])
+    if from_account_no is None or to_account_no is None:
+        raise mapper.UnmappableTransactionError(
+            f"Transfer {txn['id']} has an unrecognized bank_account/counterparty pair "
+            f"({txn['bank_account']!r} -> {txn['counterparty']!r}); expected one of {sorted(mapper.BANK_ACCOUNT_NO)}."
+        )
+    from_id = account_ids.get_qbo_id(db, from_account_no)
+    to_id = account_ids.get_qbo_id(db, to_account_no)
     payload = mapper.build_transfer_payload(txn, from_id, to_id)
     result = client.create_entity(payload.entity_type, payload.body)
     _mark(db, txn["id"], "synced", qbo_txn_id=result["Id"])

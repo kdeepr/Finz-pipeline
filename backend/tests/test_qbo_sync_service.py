@@ -255,3 +255,47 @@ def test_transfer_pairing_is_order_independent(client):
     assert debit_after["qbo_sync_status"] == "synced"
     assert credit_after["qbo_sync_status"] == "linked"
     assert credit_after["qbo_txn_id"] == debit_after["qbo_txn_id"]
+
+
+def test_transfer_with_unrecognized_counterparty_fails_cleanly_not_a_crash(client):
+    """
+    A transfer's `counterparty` must be one of the two known bank accounts
+    (that's how the debit leg knows which account to transfer *to*). If a
+    manual correction ever left it as something else, this must fail just
+    that one transaction - not raise an uncaught KeyError that would abort
+    sync_pending partway through and leave every other pending transaction
+    unprocessed.
+    """
+    db = get_db()
+    _seed_account_mapping(db)
+    bad_transfer = _insert_txn(
+        db,
+        transaction_type="transfer",
+        qbo_account=None,
+        bank_account="Operating Checking",
+        counterparty="Some Other Bank",  # not "Tax Reserve" - unrecognized
+        direction="debit",
+        amount=-1000.0,
+        transaction_date="2026-04-10",
+        description_normalized="ONLINE TRANSFER TO TAX RESERVE",
+    )
+    other_txn = _insert_txn(
+        db,
+        transaction_type="operating_expense",
+        qbo_account="6010",
+        bank_account="Operating Checking",
+        direction="debit",
+        amount=-8200.0,
+        transaction_date="2026-04-01",
+        description_normalized="RENT",
+    )
+    fake = FakeQBOClient()
+    result = sync_pending(db, client=fake)
+
+    assert result["failed"] == 1
+    assert result["synced"] == 1  # the unrelated transaction still went through
+    bad_after = db["normalized_transactions"].find_one({"id": bad_transfer["id"]})
+    assert bad_after["qbo_sync_status"] == "failed"
+    assert "unrecognized" in bad_after["qbo_sync_error"].lower()
+    other_after = db["normalized_transactions"].find_one({"id": other_txn["id"]})
+    assert other_after["qbo_sync_status"] == "synced"
