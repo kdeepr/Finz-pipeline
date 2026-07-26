@@ -3,7 +3,7 @@ from pymongo.database import Database
 
 from app.deps import db_dep
 from app.models.reconciliation import ReconciliationReport
-from app.qbo.client import QBONotConnectedError
+from app.qbo.client import QBOAPIError, QBONotConnectedError
 from app.qbo.connection_store import get_connection
 from app.reconciliation.service import reconcile
 
@@ -18,3 +18,5 @@ def get_reconciliation(period: str, db: Database = Depends(db_dep)):
         return reconcile(db, period)
     except QBONotConnectedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except QBOAPIError as exc:
+        raise HTTPException(status_code=502, detail=f"QuickBooks rejected the P&L report request: {exc}") from exc

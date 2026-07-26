@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.deps import db_dep
 from app.qbo import connection_store, oauth, state_token
 from app.qbo.accounts_sync import sync_account_ids
-from app.qbo.client import QBOClient, QBONotConnectedError
+from app.qbo.client import QBOAPIError, QBOClient, QBONotConnectedError
 from app.qbo.oauth import QBOOAuthError
 from app.qbo.sync_service import sync_pending
 
@@ -99,6 +99,8 @@ def accounts_sync(db: Database = Depends(db_dep)):
         unmatched = sync_account_ids(db, client)
     except QBONotConnectedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except QBOAPIError as exc:
+        raise HTTPException(status_code=502, detail=f"QuickBooks rejected the account query: {exc}") from exc
     total = len(load_chart_of_accounts())
     return {"matched": total - len(unmatched), "total": total, "unmatched_account_numbers": unmatched}
 

@@ -22,6 +22,23 @@ def test_accounts_sync_without_connection_returns_clear_400(client):
     assert "Not connected" in resp.json()["detail"]
 
 
+def test_accounts_sync_surfaces_qbo_api_failure_instead_of_crashing(client, monkeypatch):
+    from app.db import get_db
+    from app.qbo import connection_store
+    from app.qbo.client import QBOAPIError
+
+    connection_store.save_tokens(get_db(), "realm-1", "at", "rt", 3600)
+
+    def boom(db, client):
+        raise QBOAPIError(401, "unauthorized_client")
+
+    monkeypatch.setattr("app.api.qbo.sync_account_ids", boom)
+
+    resp = client.post("/api/qbo/accounts/sync")
+    assert resp.status_code == 502
+    assert "unauthorized_client" in resp.json()["detail"]
+
+
 def _make_state():
     """A validly-signed state, generated exactly the way /connect would."""
     from app.config import get_settings
