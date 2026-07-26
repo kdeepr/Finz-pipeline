@@ -92,6 +92,11 @@ class QBOClient:
         resp = self._request("post", url, json=body, headers=self._headers(access_token))
         return resp.json()[entity_type.capitalize()]
 
+    def delete_entity(self, entity_type: str, entity_id: str, sync_token: str) -> None:
+        access_token, realm_id = self._access_token()
+        url = f"{self._base_url()}/v3/company/{realm_id}/{entity_type}?operation=delete"
+        self._request("post", url, json={"Id": entity_id, "SyncToken": sync_token}, headers=self._headers(access_token))
+
     def query(self, sql: str) -> dict:
         access_token, realm_id = self._access_token()
         url = f"{self._base_url()}/v3/company/{realm_id}/query"

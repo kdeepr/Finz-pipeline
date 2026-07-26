@@ -168,6 +168,19 @@ def test_network_failure_surfaces_as_qbo_api_error_not_a_raw_crash(client):
         qbo_client.query("SELECT * FROM Account")
 
 
+def test_delete_entity_posts_id_and_sync_token_with_delete_operation(client):
+    db = get_db()
+    connection_store.save_tokens(db, "realm-1", "at", "rt", 3600)
+    transport = FakeTransport(post_response=FakeResponse(200, {}))
+    qbo_client = QBOClient(db, _settings(), transport=transport)
+
+    qbo_client.delete_entity("purchase", "42", "3")
+
+    method, url, body, _ = transport.calls[0]
+    assert url == "https://sandbox-quickbooks.api.intuit.com/v3/company/realm-1/purchase?operation=delete"
+    assert body == {"Id": "42", "SyncToken": "3"}
+
+
 def test_production_environment_uses_production_base_url(client):
     db = get_db()
     connection_store.save_tokens(db, "realm-1", "at", "rt", 3600)
