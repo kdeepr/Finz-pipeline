@@ -15,6 +15,7 @@ from pymongo.database import Database
 
 from app.config import Settings
 from app.qbo import connection_store, oauth
+from app.qbo.oauth import QBOOAuthError
 
 SANDBOX_BASE = "https://sandbox-quickbooks.api.intuit.com"
 PRODUCTION_BASE = "https://quickbooks.api.intuit.com"
@@ -47,9 +48,18 @@ class QBOClient:
         return connection
 
     def _access_token(self) -> tuple[str, str]:
+        # A refresh failure (expired/revoked refresh token) is re-raised as
+        # QBOAPIError rather than left as QBOOAuthError, so every call site
+        # that already handles "the QBO API call failed" (run_sync's
+        # per-transaction loop, the accounts/sync and reconciliation
+        # endpoints) handles this too, without each needing to separately
+        # know about a second, auth-specific exception type.
         connection = self._connection()
         if connection_store.is_access_token_expired(connection):
-            tokens = oauth.refresh_tokens(self.settings, connection["refresh_token"])
+            try:
+                tokens = oauth.refresh_tokens(self.settings, connection["refresh_token"])
+            except QBOOAuthError as exc:
+                raise QBOAPIError(401, f"Token refresh failed: {exc}") from exc
             connection_store.update_access_token(
                 self.db, tokens["access_token"], tokens["refresh_token"], tokens["expires_in"]
             )
