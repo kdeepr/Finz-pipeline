@@ -70,3 +70,40 @@ Whoever runs this against a real sandbox should treat the QBO
 sync/reconciliation step as the one piece still needing a first live
 smoke-test, even though the code and its logic have been reviewed and tested
 as thoroughly as possible without that connection.
+
+## A live debugging session, and its outcome
+
+After the initial build, the developer ran the app locally and reported the
+QuickBooks connect flow failing partway through - getting past Intuit's login
+and Authorize screen, then breaking. This was worked through interactively,
+attempt by attempt, and surfaced three separate real bugs in the OAuth
+callback handler that no amount of testing against a fake QBO client could
+have caught, because they were about what happens on the *local machine
+actually running the app*, not about the QBO API contract:
+
+1. The callback returned raw JSON directly in the browser instead of
+   redirecting back into the app - a real UX bug, indistinguishable from a
+   crash even on success.
+2. `code`/`realmId` were required query parameters, so when Intuit itself
+   redirected back with an `error` (e.g. access denied) instead of a code,
+   FastAPI's validation rejected the request with a generic "field required"
+   error that hid Intuit's actual, specific reason.
+3. OAuth `state` was verified against a database record - which turned out to
+   be fragile against exactly the kind of interruption a local dev workflow
+   produces (a `--reload`-triggered restart from an unrelated file change,
+   or a manual restart), producing "unrecognized or expired state" on
+   completely valid, fresh attempts.
+
+Each fix was verified concretely, not just asserted: bug 3's fix was proven
+by reproducing the exact failure - generating a state, killing the backend
+process, starting a brand-new one with a fully wiped database, and
+confirming the old state still verified correctly - rather than trusting that
+switching to a signed-token approach would obviously work. Test coverage for
+the callback endpoint (previously nonexistent) was added alongside each fix.
+
+This is worth recording plainly: the fake-client test suite gave high
+confidence in the *logic* (payload shapes, sync eligibility, idempotency,
+transfer pairing) but had a blind spot around *runtime environment behavior*
+(process restarts, browser redirect UX) that only surfaced by actually
+running the app and hitting a real failure. Both kinds of validation turned
+out to matter.
