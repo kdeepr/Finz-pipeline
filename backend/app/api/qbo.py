@@ -61,9 +61,11 @@ def callback(
     settings = get_settings()
 
     if not state_token.verify_state(settings, state):
+        max_age_minutes = state_token.MAX_AGE_SECONDS // 60
         return _redirect_with_error(
             settings,
-            "Unrecognized or expired OAuth state - the connect link may be more than 10 minutes old. Click Connect to QuickBooks again.",
+            f"Unrecognized or expired OAuth state - the connect link may be more than {max_age_minutes} minutes old, "
+            "or you may have reused an old Intuit tab from a previous attempt. Click Connect to QuickBooks again, fresh.",
         )
 
     if error or not code or not realmId:
