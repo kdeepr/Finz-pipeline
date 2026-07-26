@@ -1,6 +1,8 @@
 import secrets
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from pymongo.database import Database
 
 from app.classification.coa import load_chart_of_accounts
@@ -9,6 +11,7 @@ from app.deps import db_dep
 from app.qbo import connection_store, oauth
 from app.qbo.accounts_sync import sync_account_ids
 from app.qbo.client import QBOClient, QBONotConnectedError
+from app.qbo.oauth import QBOOAuthError
 from app.qbo.sync_service import sync_pending
 
 router = APIRouter(prefix="/api/qbo", tags=["qbo"])
@@ -31,13 +34,33 @@ def connect(db: Database = Depends(db_dep)):
 
 @router.get("/callback")
 def callback(code: str, state: str, realmId: str, db: Database = Depends(db_dep)):
-    if not db[_STATE_COLLECTION].find_one({"state": state}):
-        raise HTTPException(status_code=400, detail="Unrecognized or expired OAuth state.")
+    """
+    Intuit lands the browser here directly (a full-page redirect, not a fetch
+    call from the frontend), so this must never just return raw JSON - that
+    reads as "it broke" even on success, since the user is staring at a bare
+    API response with no indication of what to do next. Every path below ends
+    in a redirect back to the frontend, with the outcome encoded in the query
+    string, so the SPA can show it and the tab closes the loop visibly.
+    """
     settings = get_settings()
-    tokens = oauth.exchange_code_for_tokens(settings, code)
+
+    if not db[_STATE_COLLECTION].find_one({"state": state}):
+        return _redirect_with_error(
+            settings, "Unrecognized or expired OAuth state - the connect link may be stale. Click Connect to QuickBooks again."
+        )
+
+    try:
+        tokens = oauth.exchange_code_for_tokens(settings, code)
+    except QBOOAuthError as exc:
+        return _redirect_with_error(settings, str(exc))
+
     connection_store.save_tokens(db, realmId, tokens["access_token"], tokens["refresh_token"], tokens["expires_in"])
     db[_STATE_COLLECTION].delete_one({"state": state})
-    return {"connected": True, "realm_id": realmId}
+    return RedirectResponse(f"{settings.frontend_url}/?{urlencode({'qbo_status': 'connected', 'realm_id': realmId})}")
+
+
+def _redirect_with_error(settings, message: str) -> RedirectResponse:
+    return RedirectResponse(f"{settings.frontend_url}/?{urlencode({'qbo_status': 'error', 'qbo_message': message})}")
 
 
 @router.get("/status")

@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     qbo_redirect_uri: str = "http://localhost:8000/api/qbo/callback"
     qbo_realm_id: str | None = None  # sandbox company ID, set after OAuth connect
 
+    # Where the browser gets sent back to after the OAuth callback finishes -
+    # the frontend dev server by default, so the user lands back in the app
+    # instead of staring at a raw JSON response from the backend.
+    frontend_url: str = "http://localhost:5173"
+
     # --- Ingestion safety limits ---
     allowed_currencies: list[str] = ["USD"]
     max_upload_rows: int = 50_000

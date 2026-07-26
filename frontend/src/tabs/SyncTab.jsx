@@ -18,7 +18,10 @@ export function SyncTab() {
     setError(null);
     try {
       const { authorization_url } = await api.getQboConnectUrl();
-      window.open(authorization_url, "_blank", "noopener");
+      // Same-tab navigation, not a new tab: the backend's OAuth callback
+      // redirects the browser back to this app when it's done (see
+      // app/api/qbo.py), so the round trip needs to land back in this window.
+      window.location.href = authorization_url;
     } catch (err) {
       setError(err.message);
     }
@@ -74,8 +77,8 @@ export function SyncTab() {
       </div>
 
       <p className="muted">
-        Connecting opens Intuit's authorization page in a new tab - log into your sandbox company and approve access, then come back
-        and refresh status. See <code>connect_flow.md</code> for the full one-time setup. Only reviewed/corrected transactions, or
+        Connecting takes you to Intuit's authorization page - log into your sandbox company and approve access, and you'll be brought
+        straight back here. See <code>connect_flow.md</code> for the full one-time setup. Only reviewed/corrected transactions, or
         auto-classified ones above the confidence threshold, are eligible to sync; already-synced transactions are never re-posted.
       </p>
 

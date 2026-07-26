@@ -13,6 +13,12 @@ From your Intuit developer account (developer.intuit.com) → your app → **Key
 - Under **Redirect URIs**, add `http://localhost:8000/api/qbo/callback`
   (or whatever host/port you're running the backend on).
 
+**The redirect URI you register in Intuit must match `QBO_REDIRECT_URI` in
+`.env` byte-for-byte** - scheme, host, port, and path. If they don't match,
+Intuit rejects the request before you even see a login screen
+(`redirect_uri_mismatch`). If you're running the backend on a different port
+than 8000, update both places to match.
+
 Put these in `backend/.env` (copy from `.env.example`):
 
 ```
@@ -20,27 +26,35 @@ QBO_CLIENT_ID=your_client_id
 QBO_CLIENT_SECRET=your_client_secret
 QBO_ENVIRONMENT=sandbox
 QBO_REDIRECT_URI=http://localhost:8000/api/qbo/callback
+FRONTEND_URL=http://localhost:5173   # where the browser lands back after connecting
 ```
 
-## 2. Start the app and connect
+## 2. Start both apps and connect
 
 ```bash
-cd backend
-uvicorn app.main:app --reload
+cd backend && uvicorn app.main:app --reload      # in one terminal
+cd frontend && npm run dev                        # in another
 ```
 
-Then, with the server running:
+Then, from the frontend (`Sync to QuickBooks` tab):
 
-1. `GET http://localhost:8000/api/qbo/connect` → returns
-   `{"authorization_url": "https://appcenter.intuit.com/connect/oauth2?..."}`.
-2. Open that URL in your browser. Log in and select the **same sandbox
-   company** you set up in step 4.1 (the one with the chart of accounts).
-3. Intuit redirects you back to
-   `http://localhost:8000/api/qbo/callback?code=...&state=...&realmId=...`
-   - the backend exchanges the code for tokens and stores them (see
-     `app/qbo/connection_store.py`), keyed to that `realmId` (your sandbox
-     company's ID).
-4. `GET /api/qbo/status` should now show `{"connected": true, "realm_id": "..."}`.
+1. Click **Connect to QuickBooks**. This navigates your browser (same tab) to
+   Intuit's authorization page.
+2. Log in and select the **same sandbox company** you set up in step 4.1 (the
+   one with the chart of accounts), then click **Authorize**.
+3. Intuit redirects to the backend's `/api/qbo/callback`, which exchanges the
+   code for tokens, stores them (`app/qbo/connection_store.py`), and redirects
+   you straight back to the frontend with a status banner - you should land
+   back on the Sync tab showing "Connected to QuickBooks (realm ...)".
+
+If step 3 instead shows an error banner, the message is specific (expired
+OAuth state, or the exact reason the token exchange failed - e.g. a wrong
+client secret) rather than a generic failure, so start with what it says.
+
+You can still drive this by hand with `curl`/a REST client if you prefer:
+`GET /api/qbo/connect` returns the `authorization_url` directly; after
+authorizing, `GET /api/qbo/status` reports `{"connected": true, "realm_id":
+"..."}` once the callback has run.
 
 ## 3. Map the chart of accounts
 
