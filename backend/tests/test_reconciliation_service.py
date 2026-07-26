@@ -163,6 +163,26 @@ def test_expense_and_cogs_accounts_match_despite_qbos_positive_sign_convention(c
     assert rent_line.status == "match"
 
 
+def test_resolvable_account_with_zero_both_sides_is_not_a_discrepancy(client):
+    """
+    A resolvable chart-of-accounts code can legitimately have no app-side
+    entry at all (e.g. "Tools & Equipment", a Fixed Assets account never
+    included in the P&L) while QBO reports it with a $0.00 balance. Since
+    there's no actual dollar difference, that should reconcile rather than
+    get flagged as qbo_only just because only one side has an explicit entry.
+    """
+    db = _setup(client)
+    report = _build_report(dict(APRIL_LINES), APRIL_NET_PROFIT)
+    report["Rows"]["Row"][2]["Rows"]["Row"].append(_data_row("1500", "Tools & Equipment", 0.0, "id-1500"))
+    result = reconcile(db, "2026-04", client=FakeQBOClient(report))
+
+    empty_line = next(line for line in result.lines if line.account_code == "1500")
+    assert empty_line.status == "match"
+    assert empty_line.app_amount == 0.0
+    assert empty_line.qbo_amount == 0.0
+    assert result.overall_status == "reconciled"
+
+
 def test_reconciliation_matches_by_name_when_qbo_id_not_in_mapping(client):
     db = _setup(client)
     lines = dict(APRIL_LINES)

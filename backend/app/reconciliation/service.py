@@ -88,7 +88,13 @@ def reconcile(db: Database, period: str, settings: Settings | None = None, clien
         difference = round(app_amount - qbo_amount, 2)
         is_unmatched_code = code.startswith("unmatched:")
 
-        if app_entry is None:
+        if not is_unmatched_code and abs(difference) <= TOLERANCE:
+            # Both sides agree there's no real dollar activity here (e.g. an
+            # empty QBO category with nothing posted to it, $0.00 either
+            # way) - that's not a discrepancy just because only one side
+            # happens to carry an explicit entry for the code.
+            status, explanation = "match", "Amounts agree."
+        elif app_entry is None:
             status, explanation = "qbo_only", "QuickBooks reports activity on this account that isn't in the app's P&L."
         elif qbo_entry is None:
             status, explanation = "app_only", "The app classified transactions to this account, but QuickBooks shows no activity - check whether they were synced."
@@ -97,8 +103,6 @@ def reconcile(db: Database, period: str, settings: Settings | None = None, clien
                 "mismatch",
                 "Could not confidently match this QuickBooks report line to one of our chart-of-accounts codes.",
             )
-        elif abs(difference) <= TOLERANCE:
-            status, explanation = "match", "Amounts agree."
         else:
             status, explanation = (
                 "mismatch",

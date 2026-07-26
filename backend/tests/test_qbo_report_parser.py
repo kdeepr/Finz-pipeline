@@ -116,3 +116,34 @@ def test_parent_account_with_subaccounts_reports_its_own_header_amount():
     assert by_name["Utilities"] == (3645.00, "24")
     assert by_name["Gas and Electric"] == (114.09, "76")
     assert by_name["Telephone"] == (130.86, "77")
+
+
+def test_top_level_section_header_is_not_treated_as_an_account():
+    """
+    A real report showed "Cost of Goods Sold", "Expenses", and "Income"
+    spuriously appearing as their own $0.00 accounts - every top-level report
+    section carries a Header too (its own section title, e.g. "Expenses"),
+    not just nested parent-accounts like Utilities. The distinguishing factor
+    is the "group" key: only top-level sections have one.
+    """
+    report = {
+        "Rows": {
+            "Row": [
+                {
+                    "type": "Section",
+                    "group": "Expenses",
+                    "Header": {"ColData": [{"value": "Expenses"}, {"value": "0.00"}]},
+                    "Rows": {
+                        "Row": [
+                            {"type": "Data", "ColData": [{"value": "Rent Expense", "id": "101"}, {"value": "-8200.00"}]},
+                        ]
+                    },
+                    "Summary": {"ColData": [{"value": "Total Expenses"}, {"value": "-8200.00"}]},
+                },
+            ]
+        }
+    }
+    result = parse_profit_and_loss(report)
+    names = [a["account_name"] for a in result["accounts"]]
+    assert "Expenses" not in names
+    assert names == ["Rent Expense"]

@@ -58,15 +58,22 @@ def _walk_rows(rows: list[dict], data_rows: list[dict], section_totals: dict[str
             # Section's Header, not a Data row - skipping it silently drops
             # any amount posted straight to the parent account itself, even
             # though it's exactly as real as a plain Data row's amount.
-            header = row.get("Header", {}).get("ColData", [])
-            if len(header) >= 2:
-                data_rows.append(
-                    {
-                        "account_name": _clean_account_name(header[0].get("value", "")),
-                        "qbo_account_id": header[0].get("id"),
-                        "amount": _to_float(header[-1].get("value")),
-                    }
-                )
+            #
+            # Only do this for a NESTED parent-account section, though -
+            # every top-level report section (Income/COGS/Expenses/...) also
+            # carries a Header, but that's just its own section title
+            # ("Income", "Expenses", ...), not an account. Top-level sections
+            # are the ones with a "group" key; a nested parent-account isn't.
+            if not group:
+                header = row.get("Header", {}).get("ColData", [])
+                if len(header) >= 2:
+                    data_rows.append(
+                        {
+                            "account_name": _clean_account_name(header[0].get("value", "")),
+                            "qbo_account_id": header[0].get("id"),
+                            "amount": _to_float(header[-1].get("value")),
+                        }
+                    )
             nested = row.get("Rows", {}).get("Row", [])
             if nested:
                 _walk_rows(nested, data_rows, section_totals)
