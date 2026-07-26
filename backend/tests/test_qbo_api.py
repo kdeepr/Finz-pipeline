@@ -90,3 +90,30 @@ def test_callback_token_exchange_failure_redirects_with_error_instead_of_crashin
     location = resp.headers["location"]
     assert "qbo_status=error" in location
     assert "invalid_client" in location
+
+
+def test_callback_surfaces_intuit_side_error_instead_of_generic_422(client):
+    # Intuit redirects here with `error`/`error_description` and no `code`/
+    # `realmId` when something fails on its side (denied consent, a
+    # misconfigured app) - state IS still echoed back. Before this was
+    # handled, FastAPI's default validation turned this into an opaque
+    # "field required" 422 that hid Intuit's actual reason.
+    state = _seed_state(client)
+    resp = client.get(
+        "/api/qbo/callback",
+        params={"state": state, "error": "access_denied", "error_description": "The user denied access to your application."},
+        follow_redirects=False,
+    )
+    assert resp.status_code in (302, 307)
+    location = resp.headers["location"]
+    assert "qbo_status=error" in location
+    assert "denied+access" in location or "denied%20access" in location
+
+
+def test_callback_missing_code_without_explicit_error_still_redirects_cleanly(client):
+    state = _seed_state(client)
+    resp = client.get("/api/qbo/callback", params={"state": state}, follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    location = resp.headers["location"]
+    assert "qbo_status=error" in location
+    assert "did+not+return" in location or "did%20not%20return" in location

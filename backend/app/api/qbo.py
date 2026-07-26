@@ -33,7 +33,14 @@ def connect(db: Database = Depends(db_dep)):
 
 
 @router.get("/callback")
-def callback(code: str, state: str, realmId: str, db: Database = Depends(db_dep)):
+def callback(
+    state: str,
+    code: str | None = None,
+    realmId: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+    db: Database = Depends(db_dep),
+):
     """
     Intuit lands the browser here directly (a full-page redirect, not a fetch
     call from the frontend), so this must never just return raw JSON - that
@@ -41,6 +48,12 @@ def callback(code: str, state: str, realmId: str, db: Database = Depends(db_dep)
     API response with no indication of what to do next. Every path below ends
     in a redirect back to the frontend, with the outcome encoded in the query
     string, so the SPA can show it and the tab closes the loop visibly.
+
+    `code`/`realmId` are optional, not required, because a failure on
+    Intuit's side (access denied, a misconfigured app) redirects here with
+    `error`/`error_description` instead of a code - making them required
+    turned every such failure into an opaque generic 422 ("field required")
+    that hid Intuit's actual reason instead of showing it.
     """
     settings = get_settings()
 
@@ -48,6 +61,10 @@ def callback(code: str, state: str, realmId: str, db: Database = Depends(db_dep)
         return _redirect_with_error(
             settings, "Unrecognized or expired OAuth state - the connect link may be stale. Click Connect to QuickBooks again."
         )
+
+    if error or not code or not realmId:
+        message = error_description or error or "QuickBooks did not return an authorization code."
+        return _redirect_with_error(settings, message)
 
     try:
         tokens = oauth.exchange_code_for_tokens(settings, code)
