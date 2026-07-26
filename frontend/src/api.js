@@ -68,7 +68,7 @@ export const api = {
 
   // QBO
   getQboStatus: () => request("/api/qbo/status"),
-  getQboConnectUrl: () => request("/api/qbo/connect"),
+  getQboConnectUrl: () => request("/api/qbo/connect", { cache: "no-store" }),
   syncQboAccounts: () => json("POST", "/api/qbo/accounts/sync", {}),
   runQboSync: (batchId) => request(`/api/qbo/sync${batchId ? `?batch_id=${batchId}` : ""}`, { method: "POST" }),
 

@@ -1,7 +1,7 @@
 import secrets
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
 from pymongo.database import Database
 
@@ -20,7 +20,11 @@ _STATE_COLLECTION = "qbo_oauth_state"
 
 
 @router.get("/connect")
-def connect(db: Database = Depends(db_dep)):
+def connect(response: Response, db: Database = Depends(db_dep)):
+    # A cached response here would hand back a stale authorization_url (and
+    # therefore a stale, already-invalid `state`) on a re-click - this must
+    # always issue a fresh state.
+    response.headers["Cache-Control"] = "no-store"
     settings = get_settings()
     if not settings.qbo_client_id or not settings.qbo_client_secret:
         raise HTTPException(
