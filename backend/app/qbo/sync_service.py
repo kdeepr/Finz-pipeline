@@ -1,18 +1,3 @@
-"""
-Sync orchestration (PDF 4.5). Idempotency and safe retries both come from one
-idea: a transaction's own qbo_sync_status is the source of truth for whether
-it needs an API call, so the sync query itself excludes anything already
-"synced" or "linked" - running sync twice in a row simply finds nothing left
-to do the second time, rather than needing a separate "already posted?"
-check per transaction.
-
-Transfers are processed in two passes so pairing is order-independent: all
-outgoing (debit) legs sync first as a single QBO Transfer call each, then
-their paired incoming (credit) legs are marked "linked" to that same Transfer
-Id (no second API call - one Transfer object already moved both accounts).
-Any credit leg whose debit pair isn't in *this* batch (e.g. it synced in an
-earlier run) is linked by looking up the existing sync record directly.
-"""
 from datetime import datetime, timezone
 
 from pymongo.database import Database
