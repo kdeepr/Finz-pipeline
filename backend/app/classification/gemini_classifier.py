@@ -1,15 +1,3 @@
-"""
-Gemini-assisted classification - the fallback for whatever the deterministic
-rule engine can't resolve (an unrecognized vendor, an unusual debit memo).
-This is intentionally the *last* resort, not the primary classifier: rules are
-free, instant, and traceable to a specific Company Setup sentence; an LLM call
-is none of those things, so we only pay for it when the mechanical approach
-comes up empty.
-
-If GEMINI_API_KEY isn't configured, this module simply isn't invoked (see
-classification/service.py) - the transaction stays "unclassified" for manual
-review rather than blocking the pipeline.
-"""
 import json
 
 from app.classification.coa import load_chart_of_accounts, is_valid_account_code
