@@ -6,6 +6,7 @@ syncs approved transactions to QuickBooks Online, and reconciles the app's
 P&L against QuickBooks' own report - built for the Finz Data Engineering
 Challenge.
 
+[![Watch the demo]](https://drive.google.com/file/d/17MYw0asddFIa35rV5NwoSXYikxUOOeVA/view?usp=share_link)
 - `backend/` - FastAPI + MongoDB application (Python)
 - `frontend/` - React (Vite) single-page app implementing the required workflow
 - `data/` - the challenge dataset, split into per-source bank export fixtures, plus the QBO chart of accounts and company setup as JSON
