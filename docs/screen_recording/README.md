@@ -1,7 +1,4 @@
-# Screen recording
-
-`local_workflow_demo.webm` (~39s) - a real browser (Playwright-driven
-Chromium) against the actual running backend + frontend, covering:
+process 
 
 1. Uploading all 9 sample bank exports (raw-data upload).
 2. Running classification (195/195 transactions classified with explanations
