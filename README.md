@@ -78,7 +78,6 @@ Reconciliation
 Each of the five FastAPI routers (uploads, transactions/classification, pnl, qbo, reconciliation) corresponds to one tab in the frontend and one subsection of PDF section 4. The backend has no ORM - pymongo/mongomock documents are read/written directly as dicts, validated at the API boundary by Pydantic models in app/models/.
 
 ## Data model
-
 Two collections back every uploaded row, by design:
 
 raw_transactions - the row exactly as the file had it (every original column, string values, untouched). This is what "treat the data as untrusted, preserve original values" (dataset note A) means structurally, not just as a convention to remember.
@@ -90,13 +89,11 @@ Supporting collections: upload_batches (one per file uploaded),
 column_mapping_profiles (configurable field maps, see below), bank_account_aliases and vendor_directory (configurable lookup tables used by normalization/classification), classification_rules (approved corrections), qbo_connection / qbo_account_ids (QuickBooks OAuth tokens and the account-number -> QBO-Id mapping).
 
 ## Ingestion & duplicate prevention
-
 Column mapping is data (a {canonical_field: source_column_name} document in Mongo), not code - the parser and normalizer never reference a specific column name or order, so a different bank's export just needs a new profile registered via POST /api/column-mappings.
 
 Duplicate detection uses the bank's own transaction ID as the primary key when present, falling back to a content hash (date + amount + bank account + cleaned description) when it's absent. Every new row is checked against everything already ingested, not just the current file, which is what catches duplicates from overlapping source files (the dataset includes three "last N days"-style exports that re-send transactions an earlier monthly export already had - the pipeline finds all 5 of those duplicate pairs). Records that can't be safely parsed (bad date, bad amount, unrecognized bank account, missing description) are flagged (needs_review) rather than dropped, and still get a normalized record so a human can fix them.
 
 ## Classification approach 
-
 Every "ok" transaction is classified in priority order:
 
 1. Approved corrections - if a reviewer already corrected this exact pattern before, that wins. Patterns are matched on a signature that blanks out job numbers, invoice numbers, and month names, so correcting one month's rent payment teaches the system every future month's rent payment too.
@@ -108,12 +105,10 @@ The dataset includes several deliberate lookalikes the rules were built and test
 (fuel, account 6020).
 
 ## Internal P&L
-
 Computed live from normalized_transactions on every request - never a stored snapshot - grouped by each account's QBO "Account Type" (Income / Cost of Goods Sold / Expenses), which is the same grouping QuickBooks' own P&L report uses, so the reconciliation compares like for like. Transfers, owner activity, duplicates, and fixed-asset purchases are excluded
 structurally (they simply never carry a P&L-eligible transaction_type), not as a special case in the report code. See docs/pnl_output/ for the generated monthly and full-period statements.
 
 ## QuickBooks integration and reconciliation
-
 Entity mapping decision: every posted transaction is a QuickBooks Deposit (money in) or Purchase (money out) directly against the classified account - never a SalesReceipt/Invoice/Bill, because those QBO entities require a Product/Service Item, and Company Setup puts AR/AP/ inventory explicitly out of scope. A refund is money out (a debit in the bank feed) posted as a Purchase against the Customer Refunds income account, which is what makes it net against revenue without needing a Credit Memo. Transfers use QuickBooks' native Transfer entity; only the outgoing leg makes an API call, and the paired incoming leg is linked to that same Transfer Id rather than posted a second time, so one bank-to-bank move is represented once on both registers, not as two separate transactions.
 
 Account Id resolution: our chart of accounts uses account numbers (4000, 6010, ...) as human-readable references, but the QBO API needs the sandbox's own internal account Id, assigned when you created each account by hand in 4.1. POST /api/qbo/accounts/sync pulls your sandbox's real account list - paging through it, since a real company's account list, including QuickBooks' own defaults, can easily exceed a single query page - and matches it back to our chart by account number, falling back to name.
@@ -122,6 +117,15 @@ Sync eligibility & idempotency: only transactions that are reviewed/corrected by
 to you), a re-sync has no way to know those transactions already exist on the QuickBooks side, and will post them again.
 
 Reconciliation: pulls QuickBooks' own cash-basis P&L report via the API for the same period, parses its recursive Row/Section/Data structure, and compares account-by-account against the app's own P&L - matching by the real QBO account Id where known, falling back to name. Each line reports the app amount, the QBO amount, the difference, a status (match / mismatch / app_only / qbo_only), and an explanation. A clean sync is explicitly not treated as sufficient - only exact (to the cent) agreement on every account and on net profit counts as reconciled. Two things worth knowing if you're reading a real report instead of the test fixtures: QuickBooks shows Cost of Goods Sold and Expenses balances as positive numbers, while this app stores every outflow as negative, so the comparison normalizes that; and a parent account with sub-accounts (Utilities, over Gas and Electric/Telephone in this sandbox) reports its own direct postings differently than a plain account does, which the parser accounts for too.
+
+## Assumptions
+1. US date format when ambiguous. Dates without an explicit format on the mapping profile are parsed month-before-day; a non-US bank export should set an explicit date_format on its own profile instead of relying on this default.
+2. USD only for this challenge (allowed_currencies is configurable, but anything else is flagged for review rather than silently converted).
+3. Amounts as float, not arbitrary-precision Decimal. All figures in this dataset are whole dollars or cents; a production system handling
+fractional-cent activity would want Decimal/BSON Decimal128 instead.
+4. One company/sandbox connection at a time (qbo_connection is a single document) - matches this challenge's scope of one company.
+5. Bank account aliasing and the vendor directory are seeded from this dataset (Operating Checking/Tax Reserve; the ~25 recurring vendors found by reading all 195 transactions). Both are stored in Mongo and extendable via the API, not hardcoded branches, but a genuinely different dataset will need its own vendor entries added the same way.
+6. Sync-eligibility confidence threshold (0.95) is a judgment call about what counts as "safely classified" per PDF 4.5 - rule/vendor matches always clear it; low-confidence Gemini guesses are meant to require human review first.
 
 ## Known limitations
 This has genuinely been run end-to-end against a real QuickBooks sandbox - connect, sync, and reconciliation all reach a clean, exact match now. But getting there surfaced real bugs that no amount of testing against a fake QBO client would have caught, because they weren't about the mapping logic at all: a pagination gap in the account query, a sign-convention mismatch between how this app and QuickBooks represent expense amounts, and a parser gap around how QuickBooks reports a parent account's own balance when it has sub-accounts. All three are fixed and covered by tests now. The full debugging account, including a data-loss incident from a local environment misconfiguration and how it was cleaned up, is in docs/AI_USAGE.md - I'd rather document that honestly than pretend the first live run was clean.
