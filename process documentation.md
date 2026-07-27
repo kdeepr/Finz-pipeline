@@ -1,6 +1,6 @@
-# creating and troubleshooting the whole pipeline
+# Creating and troubleshooting the whole pipeline
 
-## 1. Before this session (prerequisite)
+### 1. Before this session (prerequisite)
 Created the QuickBooks Online sandbox company in the Intuit Developer dashboard. Manually created the 21-account chart of 
 accounts in that sandbox (Operating Checking, Tax Reserve, Tools & Equipment, Owner's Equity, and all Income/COGS/Expense 
 accounts),matching data/reference/qbo_chart_of_accounts.json.
