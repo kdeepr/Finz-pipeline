@@ -1,13 +1,3 @@
-"""
-Approved-correction store: when a reviewer corrects a transaction's
-classification, we can save it against the transaction's pattern signature
-(see signature.py) so every future transaction with the same shape - a
-different job number, a different month - classifies the same way
-automatically, without needing the reviewer to fix it again each time.
-
-This is checked *before* the rule engine / Gemini in classification/service.py,
-since a human's explicit correction should always outrank a generic rule.
-"""
 from pymongo.database import Database
 
 from app.models.common import new_id, utcnow
