@@ -1,17 +1,3 @@
-"""
-Deterministic classification rules, checked in order, before ever falling back
-to Gemini. Rules are preferred over an LLM call whenever the answer is
-mechanically derivable from the Company Setup accounting rules - they're free,
-instant, and 100% explainable, which matters more here than flexibility.
-
-Order matters: structural patterns (transfers, owner activity, refunds, the
-known vendor directory) are checked first because they're unambiguous
-regardless of which bank account or direction the money moved. Only once none
-of those match do we fall back to the generic "credit side => revenue,
-sub-typed by keyword" rule - this is deliberately checked *last* so it can
-never misclassify a transfer or owner contribution as revenue just because
-both are inbound.
-"""
 from dataclasses import dataclass
 
 from pymongo.database import Database
