@@ -1,11 +1,3 @@
-"""
-Intuit OAuth2 authorization-code flow. This is inherently an interactive,
-browser-based step - only you can log into your own Intuit developer account
-and click "Authorize," so this module can't be exercised end-to-end in an
-automated environment. It's built to spec against Intuit's documented OAuth2
-endpoints; connect_flow.md in the repo root walks through running it once
-you have your own QBO_CLIENT_ID/QBO_CLIENT_SECRET in .env.
-"""
 import requests
 
 from app.config import Settings
