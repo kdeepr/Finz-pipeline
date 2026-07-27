@@ -10,7 +10,7 @@ Created and activated a Python virtual environment (python3 -m venv .venv && sou
 Ran the backend (uvicorn app.main:app --reload) and frontend (npm run dev) locally.
 Filled in backend/.env with real credentials (QBO_CLIENT_ID, QBO_CLIENT_SECRET, GEMINI_API_KEY).
 Installed and started a real, persistent local MongoDB:
-```
+```bash
 brew tap mongodb/brew
 brew install mongodb-community
 brew services start mongodb-community
@@ -18,7 +18,7 @@ brew services start mongodb-community
 
 Changed .env's TESTING=true → TESTING=false so data would persist across backend restarts (the earlier value was silently using an in-memory database).
 Installed and configured GitHub CLI to fix a git authentication failure:
-```
+
 brew install gh
 gh auth login
 gh auth setup-git
