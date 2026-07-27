@@ -1,9 +1,3 @@
-"""
-Loads the required QBO chart of accounts (data/reference/qbo_chart_of_accounts.json,
-generated verbatim from the dataset's "QBO Chart of Accounts" tab) so the
-classifier and P&L both reference the *same* account list you created in the
-sandbox during 4.1 - never a hardcoded duplicate of it in Python.
-"""
 import json
 from functools import lru_cache
 from pathlib import Path
